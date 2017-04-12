@@ -7,6 +7,37 @@ class Job extends Model {
 
     public $guarded = ["id","created_at","updated_at"];
 
+    public static function find()
+    {
+        $query = Job::query();
+
+        // search results based on user input
+        \Request::input('id') and $query->where('id',\Request::input('id'));
+        \Request::input('name') and $query->where('name','like','%'.\Request::input('name').'%');
+        \Request::input('company') and $query->where('company','like','%'.\Request::input('company').'%');
+        \Request::input('details') and $query->where('details','like','%'.\Request::input('details').'%');
+
+        \Request::input('salary_top') and $query->where('salary','<',\Request::input('salary_top'));
+        \Request::input('salary_bottom') and $query->where('salary','>=',\Request::input('salary_bottom'));
+
+        \Request::input('location_id') and $query->where('location_id',\Request::input('location_id'));
+        \Request::input('type_id') and $query->where('type_id',\Request::input('type_id'));
+        \Request::input('classification_id') and $query->where('classification_id',\Request::input('classification_id'));
+
+        //\Request::input('user_id') and $query->where('user_id',\Request::input('user_id'));
+        \Request::input('user_name') and $query->join('users', 'users.id', '=', 'jobs.user_id')
+        ->where('users.name',\Request::input('user_name'))->orWhere('users.last_name',\Request::input('user_name'));
+
+        \Request::input('created_at') and $query->where('created_at',\Request::input('created_at'));
+        \Request::input('updated_at') and $query->where('updated_at',\Request::input('updated_at'));
+        
+        // sort results
+        \Request::input("sort") and $query->orderBy(\Request::input("sort"),\Request::input("sortType","asc"));
+
+        // paginate results
+        return $query->paginate(15);
+    }
+
     public static function findRequested()
     {
         $query = Job::query();
