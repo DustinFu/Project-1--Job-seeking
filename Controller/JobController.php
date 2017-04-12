@@ -9,6 +9,7 @@ use App\Classification; // Model
 use App\Type;  // Model
 use App\Location; // Model
 use App\Job; // Model
+use App\User; // Model
 use Illuminate\Http\Request;
 
 use App\Http\Requests;
@@ -150,6 +151,7 @@ class JobController extends Controller
         return redirect('/showjob/'.$create_return->id);
     }
 
+    // Show single job
     public function showjob_page(Request $request, Job $job)
     {
         // Raw SQL : 
@@ -157,12 +159,37 @@ class JobController extends Controller
         //Log::info('showjob_page query_result: ',  $query_result);
 
 
+        $job->type_name = Type::find($job->type_id)->name;
+        $job->location_name = Location::find($job->location_id)->name;
+        $job->classification_name = Classification::find($job->classification_id)->name;
+        $job->user_name = User::find($job->user_id)->name ."  ". User::find($job->user_id)->last_name;
+
         return view("showjob",['job' => $job]);
     }
 
+
+    // Search and show job list
     public function findjob_page(Request $request)
     {
-        return view("findjob");
+        $types = Type::all();
+        $locations = Location::all();
+        $classifications = Classification::all();
+
+        $records = Job::find();
+
+        foreach ($records as $record) {
+            $record->type_name = Type::find($record->type_id)->name;
+            $record->location_name = Location::find($record->location_id)->name;
+            $record->classification_name = Classification::find($record->classification_id)->name;
+            $record->user_name = User::find($record->user_id)->name ."  ". User::find($record->user_id)->last_name;
+        }
+
+        return view("findjob", ['records' => $records,
+                                    'types' => $types, 
+                                    'locations' => $locations,
+                                    'classifications' => $classifications
+                                   ] );
     }
+
 
 }
