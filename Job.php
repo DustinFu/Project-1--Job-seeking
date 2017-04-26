@@ -2,6 +2,7 @@
 namespace App;
 
 use Illuminate\Database\Eloquent\Model;
+use App\User; // Model
 
 class Job extends Model {
 
@@ -36,6 +37,60 @@ class Job extends Model {
 
         // paginate results
         return $query->paginate(15);
+    }
+
+    public static function findSuggested()
+    {
+        $login_user_id = \Request::input('rand');
+
+        // Check if login_user is provided :  
+        if (empty($login_user_id))
+        {
+            return array();
+        }
+
+        // Find user's interest
+        $user = User::where('id', $login_user_id)->get();
+        if(empty($user))
+        {
+            return array();
+        }
+      
+        // Find jobs based on user's interest
+        $query_1 = Job::query();
+        $query_2 = Job::query();
+        $jobs_1 = $query_1->where('classification_id', $user[0]['interest_classification_id'])->get();
+        $jobs_2 = $query_2->where('classification_id', $user[0]['interest_classification_id_2'])->get();
+
+        // Random select
+        if($jobs_1->count() >= 2 ){
+            $records_suggested_1 = $jobs_1->random(2)->all();
+        }else if ($jobs_1->count() == 1){
+            $records_suggested_1 = array($jobs_1[0]);
+        }else{
+            $records_suggested_1 = array();
+        }
+        
+        if($jobs_2->count() >= 2 ){
+            $records_suggested_2 = $jobs_2->random(2)->all();
+        }else if ($jobs_2->count() == 1){
+            $records_suggested_2 = array($jobs_2[0]);
+        }else{
+            $records_suggested_2 = array();
+        }
+
+        return array_merge($records_suggested_1, $records_suggested_2);
+       
+/*
+        \Request::input('created_at') and $query->where('created_at',\Request::input('created_at'));
+        \Request::input('updated_at') and $query->where('updated_at',\Request::input('updated_at'));
+
+        // sort results
+        \Request::input("sort") and $query->orderBy(\Request::input("sort"),\Request::input("sortType","asc"));
+
+        // paginate results
+        return $query->paginate(15);
+*/
     }
 
     public static function findRequested()
