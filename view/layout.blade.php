@@ -37,23 +37,24 @@
 <div class="container header">
     <div class="row">
         <div class="col-xs-4">
-            <a href="./"><img class="logo img-responsive" src="{{ asset('images/logo.png') }}" alt=""></a>
+            <a href="{{$base_url}}/"><img class="logo img-responsive" src="{{ asset('images/logo.png') }}" alt=""></a>
         </div>
 
         <div id="login_link" class="col-xs-8 info" style="display:none;">
-            <a href="{{$base_url}}/login">Log in</a>
-            or
+            <a href="{{$base_url}}/login">Login</a>
+            /
             <a href="{{$base_url}}/register">Register</a>
         </div>
         <div id="logout_link" class="col-xs-8 info" style="display:none; cursor: pointer;" >
-            <a onclick="onClickLogout()" >Log out</a>
+            <a onclick="onClickLogout()" >Logout</a>
         </div>
     </div>
 
     <div class="row mynav">
-        <a class="active" href="./">Home</a> |
+        <!--class="active"-->
+        <a href="{{$base_url}}/">Home</a> |
         <a href="{{$base_url}}/postjob">Post job</a> |
-        <a href="{{$base_url}}/findjob">Find job</a> |
+        <a id="findjob_link" href="{{$base_url}}/findjob">Find job</a> |
         <a href="{{$base_url}}/aboutus">About us</a> |
         <a href="{{$base_url}}/contactus">Contact us</a>
     </div>
@@ -108,6 +109,9 @@
         }else{
             $("#login_link").css({ display: "none"});
             $("#logout_link").css({ display: "block"});
+
+            var findjob_link = $("#findjob_link").attr('href');
+            $("#findjob_link").attr("href", findjob_link + "?rand=" + g_user.id);
         }
 
         if (typeof check_login_callback === "function") { 
