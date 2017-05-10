@@ -10,6 +10,10 @@ use App\Type;  // Model
 use App\Location; // Model
 use App\Job; // Model
 use App\User; // Model
+use App\ClassificationSkill; // Model
+use App\Education; // Model
+use App\JobSkillExperience; // Model
+
 use Illuminate\Http\Request;
 
 use App\Http\Requests;
@@ -120,11 +124,15 @@ class JobController extends Controller
     {
         $types = Type::all();
         $locations = Location::all();
+        $educations = Education::all();
         $classifications = Classification::all();
-
+        $classification_skills = ClassificationSkill::all();
+        
         return view('postjob', ['types' => $types, 
                                 'locations' => $locations,
-                                'classifications' => $classifications
+                                'educations' => $educations,
+                                'classifications' => $classifications,
+                                'classification_skills' => $classification_skills,
                                ]); 
     }
 
@@ -144,11 +152,110 @@ class JobController extends Controller
 
 //   [validation] Option 2 to handle input error : this method will redirect back to the input view page with $errors
         $validate_return = $this->validate($request, Job::validationRules());
-        $create_return = Job::create($request->all());
-        
+
+
+
+
+        // Create Job to TABLE "jobs": 
+        $input = $request->only(["name", "company", "salary", "details", "location_id", "education_id", "type_id", "classification_id", "user_id"]);
+        $create_return = Job::create($input);        
         Log::info('postjob_api create_return: '.$create_return);
 
+
+        // Create skill/experience to TABLE "job_skill_experiences"
+        $classification_skills = ClassificationSkill::all();
+        foreach ($classification_skills as $classification_skill) {
+            $req_input_name = "classification_skill_".$classification_skill->id;
+            if ($request->has($req_input_name)) {                
+                JobSkillExperience::create(['job_id' => $create_return->id,
+                                            'skill_id' => $classification_skill->id,
+                                            'experience_years' => $request->input($req_input_name)
+                                           ]);
+            }
+        }
+
+
         return redirect('/showjob/'.$create_return->id);
+    }
+
+    // edit job page
+    public function editjob_page(Request $request, Job $job)
+    {
+        $types = Type::all();
+        $locations = Location::all();
+        $educations = Education::all();
+        $classifications = Classification::all();
+        $classification_skills = ClassificationSkill::all();
+        
+        $job->user_name = User::find($job->user_id)->name ."  ". User::find($job->user_id)->last_name;
+
+        // Find job's skills
+        $job_skills = JobSkillExperience::query()->where('job_id', $job->id)->get();
+        $job_skills_years = array();
+        if(count($job_skills)!=0){
+            foreach ($job_skills as $value) {
+                $job_skills_years[$value->skill_id] = $value->experience_years;
+            }
+        }else{
+            foreach ($classification_skills as $value) {
+                $job_skills_years[$value->id] = 0;
+            }
+        }
+
+        // Check if this job belongs to current login user
+        $login_user_id = $request->session()->get('login_user_id');
+        if(!empty($login_user_id) and $login_user_id == $job->user_id){
+            $myjob = true;
+        }else{
+            $myjob = false;
+        }
+
+        return view('editjob', ['types' => $types, 
+                                'locations' => $locations,
+                                'educations' => $educations,
+                                'classifications' => $classifications,
+                                'classification_skills' => $classification_skills,
+                                'job' => $job,
+                                'job_skills_years' => $job_skills_years,
+                                'myjob' => $myjob
+                               ]); 
+    }
+
+    // Call this API to update job
+    public function updatejob_api(Request $request, Job $job)
+    {
+        
+        // Update job TABLE
+        $job_data = $request->only([
+                                    "name", 
+                                    "company", 
+                                    "salary", 
+                                    "details", 
+                                    "location_id", 
+                                    "education_id", 
+                                    "type_id", 
+                                    "classification_id"
+                                    ]);
+        $job->update($job_data);
+
+        // Delete all records of this job in TABLE "job_skill_experiences"
+        JobSkillExperience::where('job_id', $job->id)->delete();
+
+        // Update job's skill/experiecne in TABLE "job_skill_experiences"
+        $classification_skills = ClassificationSkill::all();
+        foreach ($classification_skills as $classification_skill) {
+            $req_input_name = "classification_skill_".$classification_skill->id;
+            if ($request->has($req_input_name)) {                
+                JobSkillExperience::create(['job_id' => $job->id,
+                                            'skill_id' => $classification_skill->id,
+                                            'experience_years' => $request->input($req_input_name)
+                                           ]);
+            }
+        }
+
+
+        return redirect('/findjob');
+
     }
 
     // Show single job
@@ -183,7 +290,8 @@ class JobController extends Controller
             $record->user_name = User::find($record->user_id)->name ."  ". User::find($record->user_id)->last_name;
         }
 
-        $records_suggested = Job::findSuggested();
+        //$records_suggested = Job::findSuggested();
+        $records_suggested = Job::findRecommended();
         foreach ($records_suggested as $record) {
             $record->type_name = Type::find($record->type_id)->name;
             $record->location_name = Location::find($record->location_id)->name;
